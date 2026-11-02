@@ -1,0 +1,6 @@
+{
+  "name": "Alcorão Sagrado & Tafsir em Português",
+  "description": "Alcorão com caligrafia árabe, traduções em português e Tafsir versículo a versículo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

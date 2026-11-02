@@ -1,0 +1,284 @@
+name: Gerar APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # O npm 10 (que vem com o Node 22) tem um bug que quebra com:
+      # "Cannot read properties of null (reading 'edgesOut')". O npm 11 corrige.
+      - name: Atualizar npm
+        run: npm install -g npm@11
+
+      # Sem package-lock.json no repositório, o npm resolve tudo do zero no Linux.
+      # (Não use npm ci aqui. Se você commitar um lockfile gerado no Windows/Mac,
+      # o binário nativo do lightningcss pode faltar no Linux.)
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund
+
+      - name: Mostrar log do npm (só se a instalação falhar)
+        if: failure()
+        run: cat ~/.npm/_logs/*.log | tail -n 150
+
+      - name: Build estático do site (TanStack Start em modo SPA)
+        run: npm run build
+
+      - name: Preparar pasta web (dist/client)
+        run: |
+          echo "Conteúdo de dist/client:"
+          ls -la dist/client
+          # Plano B: algumas versões do Start geram _shell.html em vez de index.html
+          if [ ! -f dist/client/index.html ] && [ -f dist/client/_shell.html ]; then
+            cp dist/client/_shell.html dist/client/index.html
+          fi
+          test -f dist/client/index.html || { echo "ERRO: dist/client/index.html não foi gerado"; exit 1; }
+
+      # Só avisa no log; nunca falha o build por causa disso.
+      - name: Conferir fingerprint de autoria no HTML
+        run: |
+          if grep -q "FP-20261029-TAFSIR-7867495988FE" dist/client/index.html; then
+            echo "Fingerprint FP-20261029-TAFSIR-7867495988FE encontrado em dist/client/index.html."
+          else
+            echo "AVISO: fingerprint FP-20261029-TAFSIR-7867495988FE não encontrado em dist/client/index.html."
+          fi
+
+      # DESATIVADO: a ofuscação quebrou o app em runtime (tela branca infinita,
+      # o chunk lazy-loaded de src/legacy/App para de funcionar). O passo roda
+      # sem erro no CI (por isso não dava pra perceber aqui), mas o código
+      # ofuscado falhava dentro do WebView. tools/obfuscate-dist.mjs e
+      # tools/obfuscator.config.json continuam intocados; só a chamada foi
+      # comentada, pra poder reativar com mais segurança no futuro.
+      - name: Ofuscar bundle JS (proteção de autoria) [desativado]
+        continue-on-error: true
+        run: |
+          echo "Ofuscação desativada: quebrou o app em runtime (tela branca infinita)."
+          # npm i -D javascript-obfuscator
+          # node tools/obfuscate-dist.mjs dist/client/assets 1500
+
+      - name: Criar configuração do Capacitor
+        run: |
+          cat > capacitor.config.json <<'JSON'
+          {
+            "appId": "com.tafsir.app",
+            "appName": "Tafsir em Português",
+            "webDir": "dist/client",
+            "server": { "androidScheme": "https" },
+            "plugins": { "CapacitorHttp": { "enabled": true } }
+          }
+          JSON
+
+      # Capacitor 7+ exige Java 21 (Java 17 quebra o gradle)
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Adicionar plataforma Android
+        run: npx cap add android
+
+      # Troca o ícone padrão do Capacitor pela logo do projeto (caneta dourada).
+      # Se algo falhar aqui, o APK ainda é gerado (só que com o ícone padrão).
+      - name: Aplicar logo do app (ícone e tela de abertura)
+        continue-on-error: true
+        run: |
+          set -eu
+          ICON=public/icons/icon-maskable-512.png
+          LOGO=public/icons/icon-512.png
+          test -f "$ICON" || { echo "Faltando $ICON"; exit 1; }
+          test -f "$LOGO" || { echo "Faltando $LOGO"; exit 1; }
+          command -v convert >/dev/null || sudo apt-get install -y imagemagick
+
+          RES=android/app/src/main/res
+          TMP=$(mktemp -d)
+
+          # Cor de fundo = cor do canto da própria imagem (fallback: verde do tema)
+          GREEN=$(convert "$ICON" -crop 1x1+4+4 txt:- | grep -oE '#[0-9A-Fa-f]{6}' | head -n1 || true)
+          [ -n "$GREEN" ] || GREEN="#095C2C"
+          echo "Cor de fundo: $GREEN"
+
+          # 1) Gera tudo numa pasta temporária (se falhar, o projeto não é tocado)
+          for entry in mdpi:48:108 hdpi:72:162 xhdpi:96:216 xxhdpi:144:324 xxxhdpi:192:432; do
+            IFS=: read -r dpi legacy fg <<< "$entry"
+            mkdir -p "$TMP/mipmap-$dpi"
+            convert "$ICON" -resize "${legacy}x${legacy}" "$TMP/mipmap-$dpi/ic_launcher.png"
+            cp "$TMP/mipmap-$dpi/ic_launcher.png" "$TMP/mipmap-$dpi/ic_launcher_round.png"
+            convert "$ICON" -resize "${fg}x${fg}" "$TMP/mipmap-$dpi/ic_launcher_foreground.png"
+          done
+
+          # Tela de abertura nativa: cada splash.png fica totalmente branco (#FFFFFF),
+          # sem logo e com o mesmo tamanho de antes. Os arquivos não são apagados
+          # nem renomeados, porque o tema do Android depende deles.
+          find "$RES" -name splash.png | while read -r f; do
+            size=$(identify -format '%wx%h' "$f")
+            out="$TMP/splash/${f#$RES/}"
+            mkdir -p "$(dirname "$out")"
+            convert -size "$size" "xc:#FFFFFF" "$out"
+          done
+
+          # 2) Copia para o projeto Android
+          cp -r "$TMP"/mipmap-* "$RES"/
+          if [ -d "$TMP/splash" ]; then cp -r "$TMP/splash/." "$RES/"; fi
+
+          mkdir -p "$RES/mipmap-anydpi-v26" "$RES/values"
+          for name in ic_launcher ic_launcher_round; do
+            cat > "$RES/mipmap-anydpi-v26/$name.xml" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ic_launcher_background"/>
+              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>
+          XML
+          done
+
+          cat > "$RES/values/ic_launcher_background.xml" <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_launcher_background">$GREEN</color>
+          </resources>
+          XML
+
+          # 3) Android 12+: a tela de abertura do sistema fica branca e sem ícone.
+          #    Se qualquer validação falhar, só esta parte é pulada (o build segue).
+          STYLES="$RES/values/styles.xml"
+          echo "Conteúdo de $STYLES gerado pelo cap add android:"
+          cat "$STYLES" || echo "(styles.xml não encontrado)"
+
+          V31=1
+          LAUNCH_STYLE="AppTheme.NoActionBarLaunch"
+          command -v xmllint >/dev/null || sudo apt-get install -y libxml2-utils || V31=0
+          if [ "$V31" = 1 ] && { [ -f "$STYLES" ] && xmllint --noout "$STYLES"; }; then
+            xp() { xmllint --xpath "$1" "$STYLES" 2>/dev/null || true; }
+
+            # Usa exatamente os nomes que o styles.xml gerado já tem
+            [ "$(xp "string(/resources/style[@name='$LAUNCH_STYLE']/@name)")" = "$LAUNCH_STYLE" ] || V31=0
+            ORIG_PARENT=$(xp "string(/resources/style[@name='$LAUNCH_STYLE']/@parent)")
+            ORIG_PARENT=${ORIG_PARENT#@style/}
+            echo "Estilo $LAUNCH_STYLE original: parent='$ORIG_PARENT'"
+            [ "$ORIG_PARENT" = "Theme.SplashScreen" ] || V31=0
+
+            # Tema usado depois da abertura: o que o estilo original declara em
+            # postSplashScreenTheme ou, se não declara, o que o BridgeActivity aplica.
+            POST_THEME=$(xp "string(/resources/style[@name='$LAUNCH_STYLE']/item[@name='postSplashScreenTheme'])")
+            POST_THEME=${POST_THEME#@style/}
+            if [ -z "$POST_THEME" ]; then
+              BA=$(find node_modules/@capacitor/android -name BridgeActivity.java 2>/dev/null | head -n1)
+              RNAME=""
+              if [ -n "$BA" ]; then
+                RNAME=$(grep setTheme "$BA" | grep -oE 'getIdentifier\("[A-Za-z0-9_]+", *"style"' | head -n1 | grep -oE '"[A-Za-z0-9_]+"' | head -n1 | tr -d '"' || true)
+              fi
+              if [ -n "$RNAME" ]; then
+                POST_THEME=$(xp "string(/resources/style[translate(@name,'.','_')='$RNAME']/@name)")
+              fi
+            fi
+            echo "Tema pós-abertura: '$POST_THEME'"
+            [ -n "$POST_THEME" ] && [ "$(xp "string(/resources/style[@name='$POST_THEME']/@name)")" = "$POST_THEME" ] || V31=0
+            [ ! -e "$RES/values-v31/styles.xml" ] || { echo "values-v31/styles.xml já existe"; V31=0; }
+          else
+            V31=0
+          fi
+
+          if [ "$V31" = 1 ]; then
+            mkdir -p "$TMP/v31/values-v31" "$TMP/v31/drawable"
+            cat > "$TMP/v31/drawable/splash_icon_transparent.xml" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="24dp"
+              android:height="24dp"
+              android:viewportWidth="24"
+              android:viewportHeight="24">
+              <path
+                  android:fillColor="#00000000"
+                  android:pathData="M0,0h24v24h-24z"/>
+          </vector>
+          XML
+            cat > "$TMP/v31/values-v31/styles.xml" <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="$LAUNCH_STYLE" parent="Theme.SplashScreen">
+                  <item name="windowSplashScreenBackground">#FFFFFF</item>
+                  <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_transparent</item>
+                  <item name="postSplashScreenTheme">@style/$POST_THEME</item>
+              </style>
+          </resources>
+          XML
+            if xmllint --noout "$TMP/v31/drawable/splash_icon_transparent.xml" "$TMP/v31/values-v31/styles.xml" \
+              && mkdir -p "$RES/values-v31" "$RES/drawable" \
+              && cp "$TMP/v31/drawable/splash_icon_transparent.xml" "$RES/drawable/splash_icon_transparent.xml" \
+              && cp "$TMP/v31/values-v31/styles.xml" "$RES/values-v31/styles.xml"; then
+              echo "Criado $RES/values-v31/styles.xml:"
+              cat "$RES/values-v31/styles.xml"
+            else
+              echo "AVISO: XML do values-v31 inválido ou não copiado; pulando só essa parte."
+            fi
+          else
+            echo "AVISO: não foi possível preparar o values-v31 com segurança; pulando só essa parte."
+          fi
+
+          echo "Nome do app no Android:"
+          grep app_name "$RES/values/strings.xml" || true
+
+      # Marca d'água esteganográfica (LSB + tEXt) nos ícones e splash gerados.
+      # Se algo falhar aqui (ex.: Pillow não instala), o build continua normalmente.
+      - name: Marcar fingerprint nos ícones e splash (estego)
+        continue-on-error: true
+        run: |
+          set -eu
+          python3 -m pip install --user Pillow || python3 -m pip install --user --break-system-packages Pillow
+          RES=android/app/src/main/res
+          FILES=$(find "$RES" \( -name 'ic_launcher*.png' -o -name 'splash.png' \))
+          if [ -n "$FILES" ]; then
+            # tools/stego.py só lida com PNG em modo RGB/RGBA. Uma imagem de cor
+            # sólida (como o splash.png branco) às vezes sai do ImageMagick em
+            # modo "1" (preto-e-branco), o que quebra o script. Convertemos o
+            # modo aqui, sem alterar nada dentro de tools/, antes de marcar.
+            for f in $FILES; do convert "$f" "PNG32:$f"; done
+            python3 tools/stego.py embed "FP-20261029-TAFSIR-7867495988FE|7867495988feadaf" $FILES
+          else
+            echo "Nenhum ic_launcher*.png ou splash.png encontrado em $RES"
+          fi
+
+      - name: Sincronizar Capacitor
+        run: npx cap sync android
+
+      - name: Gerar o APK (debug)
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Gerar SHA256SUMS (build + APK)
+        run: |
+          sh tools/make-sums.sh dist/client > SHA256SUMS
+          sha256sum android/app/build/outputs/apk/debug/app-debug.apk >> SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Salvar o APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tafsir-APK
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            SHA256SUMS
+          if-no-files-found: error
+
+          

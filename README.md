@@ -1,11 +1,17 @@
-<div align="center">
+# Alcorão Sagrado & Tafsir em Português
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Alcorão com traduções em português e Tafsir versículo a versículo.
+Projeto sem fins lucrativos para a Ummah Brasileira (WAZLA / u/BerryAllenn).
 
-  <h1>Built with AI Studio</h2>
+## Desenvolvimento
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+Requer Node.js e npm.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+```sh
+npm i
+npm run dev
+```
 
-</div>
+Testes: `npm test` · Build: `npm run build`
+
+A chave `GEMINI_API_KEY` deve ficar apenas nas variáveis de ambiente do servidor (veja `.env.example`).

@@ -1,0 +1,54 @@
+Projeto ........: Alcorão Sagrado & Tafsir em Português (WAZLA / u/BerryAllenn)
+Fingerprint ID .: FP-20261029-TAFSIR-7867495988FE
+SHA-256 geral ..: 7867495988feadaf399ce8e65f2a3836b075f02cef353768e5253a901e78bf42
+Data ...........: 2026-10-29
+Zip original ...: Tafsir-em-Portugu-s-APP-temas-revisado.zip
+SHA-256 do zip .: 5bb862b3ca5c2fe98026677dbef897adc6fa2dd383619162d7620e4e72375231
+
+Como reproduzir: extraia o ZIP ORIGINAL e rode
+  python3 tools/fingerprint.py <pasta-extraida>
+O ID e o SHA-256 geral devem ser identicos aos acima.
+(O projeto protegido tem arquivos modificados de proposito, entao o hash dele
+ sera diferente; a prova do original e o hash do zip original + este baseline.)
+
+Hash por arquivo do projeto ORIGINAL:
+fad6f295f2a13716d64d5519c0a82b35fd6a881b291e1fbffc9a1f92cb2c0189  metadata.json
+7e871f9843542936f17af87f6ed14e7c50eb5e89e2d64097ea51935ad973fc03  package.json
+21d2665f57eeaac11f4bd544cc6d74c367582e15a91dcd31961e0e7848693b6a  public/manifest.json
+6dec1358a23d4025477a5e34ec0f3dd0524942445884a935d1690cc5cd3f00d2  src/legacy/App.tsx
+702871412445842a46810abdfc771e1a2d30af2fa29315071acfbeafa627ffb5  src/legacy/components/AboutPage.tsx
+6f7a1fb8bfeaaa5769212635f5b221632b23fe1e78648bf03cb33bc149901b95  src/legacy/components/AudioPlayerBar.tsx
+a6bc9aa96a8173d283d1c052aba3d86ee79f35e6a15993dc70f1b014daa12a80  src/legacy/components/AyahOrnamentalMarker.tsx
+0134c2e941ec3f2788573c4611f16848c976c653f1e2dc55ed3d6a2ac99b960f  src/legacy/components/BookmarksDrawer.tsx
+de71550573dfa96d5f6a42ae208bb7c19df022a8209f2911500972c701badb2f  src/legacy/components/DailyAyahModal.tsx
+845e0865525c68d42fa26926e9113250c6bba5250a75fea0b968b24f0000ab68  src/legacy/components/HeroSection.tsx
+7efaea97c4dd5eb6af89c1b1b34ff5b5ab04e84a8fc9ea45835fa1e4f2e5566d  src/legacy/components/InlineRealTafsirView.tsx
+d3955954b4e854ca94872fdf396d21a9b09a7a04e8469c5e196119ed98279917  src/legacy/components/Navbar.tsx
+e3a5a1cf62bfde4afdf81572e0c1df4332ee12bba276962ee874b7c2c50b510b  src/legacy/components/QuranReader.tsx
+d5483c77c71d3bca06efdd18b736b0d539d61c44b01551b3a17213c04700293d  src/legacy/components/SettingsModal.tsx
+9ed2da36ddd681a58f3803c8480e355aa2453ef0cbd0a3a37df303dcf20f4ff1  src/legacy/components/SiteFooter.tsx
+0173fc069a652ddcf218db1c565e42520ca556b86586db880712c90b2e699cc2  src/legacy/components/SurahCatalog.tsx
+9a8e4d38a65d24e856cdca3fa4c2e064b25953e58b22425108bb1beffe7b7aaa  src/legacy/components/TafsirDrawer.tsx
+701e883766be96eea369bf4ee4d9877a93dc685ec7ffb1e3714db258b4cc8266  src/legacy/components/TafsirTextRenderer.tsx
+dbbf1d1c80fe1a2f1f8c999ae0a412722d353c9dc19f59320cb86056a23edba2  src/legacy/components/ThematicExplorer.tsx
+e4d72ae219b91bda77564a80de431106543b9612c132f89dbc090f3f29a0df88  src/legacy/components/TranslatableTafsir.tsx
+101c86e4b861f246bd6b2d7917434ef1424d8fb6bacfa939b14d8d60626d531b  src/legacy/components/TranslationWithNotes.tsx
+6e38b2744f762aee4a076f6c3ec332e8d8c506c533f5d24e81e926d979da6494  src/legacy/components/VerseSourceDetails.tsx
+516b72f161c7893c08525c064541e245c96bf1ece1835f1e751af99ec1c05ddc  src/legacy/data/bundledTafsir.ts
+856fee4acd6217e0539c2526ffd251fddc5b508b4ac551d6ba8b5ce283bb4033  src/legacy/data/completeTafsirDatabase.ts
+19975b22d61acfa737a598b25c7f610a56dfdbb45f6d8ca652b6a6418c4b07d7  src/legacy/data/projectInfo.ts
+6d3bb387ca8be677ac17ccf6a0b2600f0b899e3c2382489ca55ba746a33c98ce  src/legacy/data/quranSurahs.ts
+4a100d64840bc5f8247c822c7c06a3a071187a7cc69994c09d0a6c9300399080  src/legacy/data/tafsirThemes.ts
+0fa94fae31542535cd46828ac8501100acf0ff67b6b56cb59792c1dd94dd1058  src/legacy/services/quranApi.ts
+63d4fd1af519ca597371fcc99eb83d6a124380cbc7b5e8703a68bc0dd63fecc0  src/legacy/services/realTafsirApi.ts
+d1495cbe2e8ba6d2ba6a16d2e99656124d2eadc7f9ba22849827d4f408badc0d  src/legacy/types/quran.ts
+62307f52f05bfce420248b0fd2c28477596fc3dc405c8c5c61f978355e9db809  src/routes/__root.tsx
+9fd4016be1771e20f90c21fa486c14e1eab48cad0aabc8b1fb0d8981dc9eeceb  src/routes/index.tsx
+f0ee683067afee145f81a63a3af76b3d3767e2a1f61f0e82582f8da184ad3ef6  src/server.ts
+a5b88bf2504ba0afc6cff2335eb75f60d7abb92114869108b3a97ac97aa126f4  src/server/sources.server.ts
+706ce9e2e7a7051265dadd13ba93a3a33635d280d6aa3f4d60e1020cbdd410c4  src/server/tafsir-ai.server.ts
+d79d142c6c5d057acc7a140197f464ef29a2c55bb422aafe700f82b418894e74  src/start.ts
+b353ef676c6bca2276f56ce4c7ab4009fd97fe734f2a50c496c34f9ae61ade48  src/styles.css
+e86f30fcb44f4fe5aaa1138e6f432f0fc3c094d4d7ad36bcabfaf1db8ca96a0e  tsconfig.json
+694f17daf64d3bf3481ee838ce69c26c593c60c0ed45a19209754fe5a742bcf0  vite.config.ts
+

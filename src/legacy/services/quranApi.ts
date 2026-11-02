@@ -93,7 +93,16 @@ async function loadSurahJson(surahNumber: number): Promise<{ ayahs: any[] }> {
     return json;
   }
 }
-
+function stripLeadingBismillah(text: string, surahNumber: number, numberInSurah: number) {
+  if (numberInSurah !== 1 || surahNumber === 1 || surahNumber === 9) return text;
+  const plain = (s: string) =>
+    s.replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "").replace(/\u0671/g, "\u0627");
+  const words = text.trim().split(/\s+/);
+  if (words.length > 4 && plain(words.slice(0, 4).join(" ")) === "بسم الله الرحمن الرحيم") {
+    return words.slice(4).join(" ");
+  }
+  return text;
+}
 export async function fetchSurahAyahs(
   surahNumber: number,
   primaryTranslation: "pt.nasr" | "pt.elhayek" = "pt.nasr",

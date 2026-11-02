@@ -109,7 +109,7 @@ export async function fetchSurahAyahs(
 ): Promise<Ayah[]> {
   // v3 separates results containing verified, verse-specific transliterations
   // from older entries that used the same generic Bismillah fallback.
-  const cacheKey = `v4_${surahNumber}_dual_${primaryTranslation}`;
+  const cacheKey = `v5_${surahNumber}_dual_${primaryTranslation}`;
   if (cache[cacheKey]) {
     return cache[cacheKey];
   }
@@ -163,7 +163,7 @@ export async function fetchSurahAyahs(
       return {
         number: ayah.number,
         numberInSurah: ayah.numberInSurah,
-        arabicText: ayah.arabicText,
+        arabicText: stripLeadingBismillah(ayah.arabicText, surahNumber, ayah.numberInSurah),
         ...(remoteTransliteration || bundledTransliteration
           ? { transliteration: remoteTransliteration || bundledTransliteration }
           : {}),

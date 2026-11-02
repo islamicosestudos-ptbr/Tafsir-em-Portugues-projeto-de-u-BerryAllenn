@@ -1,0 +1,9 @@
+// FP-20261029-TAFSIR-7867495988FE · WAZLA / u/BerryAllenn
+{
+  "name": "tafsir-em-portugues",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./dist/client",
+    "not_found_handling": "single-page-application"
+  }
+}
